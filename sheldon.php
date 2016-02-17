@@ -1,14 +1,14 @@
 <?php
-	Class Sheldon {
+	Class SheldonModel {
 		
-		private static $table = "";
-		protected static $pdo = false;
+		public $table = "";
+		protected $pdo = false;
 		protected static $driver = "mysql";
 		protected static $db = array(
 			'mysql' => array(
 				'driver'    => 'mysql',
 				'host'      => 'localhost',
-				'db'  		=> 'test',
+				'db'  		=> 'to',
 				'user'  	=> 'root',
 				'pass'		=> '',
 				'charset'   => 'utf8',
@@ -17,7 +17,8 @@
 			),
 		);
 
-		//подготовленные данные для запроса
+
+        //подготовленные данные для запроса
 		protected $preparedData = array(
 			"fields" => array(),
 			"aliases" => array(),
@@ -25,98 +26,207 @@
 			"orders" => array(),
 			"limit" => array(),
 		);
-
 		//подготовленные данные для запроса
 		protected $byField = false;
 		//Поля применяемые для выборки
-		protected $fields = array();
+		protected $fields  = array();
 		//Асевдонимы выбираемых полей
 		protected $aliases = array();
 		//фильтры налагаемые на запрос
 		protected $filters = array();
 		//Поля упорядочиваний для выборки
-		protected $orders = array();
+		protected $orders  = array();
 		//Лимит для выборки
-		protected $limit = array();
+		protected $limit   = array();
 		//Массив объединений
-		protected $joins = array();
+		protected $joins   = array();
 		//Массив поглощенных таблиц
 		protected $absorbs = array();
 
+		public function isAssoc($arr){
+
+			if (gettype($arr)<>"array") {return false;}
+
+			if (strval($arr[key($arr)]=="")){
+
+				return false;
+
+			} else {
+
+		    	return array_keys($arr) !== range(0, count($arr) - 1);
+
+		    }
+
+		}
+
+
 		private function connect(){
 
-			$rez = false;
-			
 			if (self::$driver == "mysql"){
+
 				$connectStr =  "mysql:host=".(self::$db['mysql']['host']).";dbname=".(self::$db['mysql']['db']);
+
 				$user = self::$db['mysql']['user'];
+
 				$pass = self::$db['mysql']['pass'];
+
 				$this->pdo = new PDO($connectStr, $user, $pass);
+
 			}
+
 			return $this->pdo;
 
 		}
 
 
-		protected function init() {
-			if (!isset($this)){
-				$n = get_called_class();
-				$o = new $n;
-				$table = (isset($o->tableName)? $o->tableName: strtolower($n));
-				$o->table = $table;
-			} else {
-				$o = $this;
-			}
-			return $o;
-		}
-
 
 		public function by(){
 
-			$o = self::init();
 			if (trim(func_get_arg(0)) <> ""){
-				$o->byField = func_get_arg(0);	
+
+				$this->byField = func_get_arg(0);	
+
 			}
-			return $o;
+
+			return $this;
 			
 		}
 
-		public function byId(){
-			
-			$o = self::init();
-			$o->byField = "id";	
-			return $o;
-			
-		}
+		public function parse($data){
+
+			$object = false;
+
+//			var_dump(self::isAssoc($data));
+
+			if (self::isAssoc($data)){
+
+				$data_object = key($data);
+
+				//echo "class - ".$data_object;
+
+				$object = $data_object::init();
+
+				foreach ($data[key($data)] as $value) {
+
+					$key = key($value);
+
+					if (strval($key) <> ""){
+	
+						
+
+						$arr = $value[$key];
+
+						foreach ($arr as &$rec) {
+							
+							// echo "<pre>";
+							// print_r(self::isAssoc($rec));
+							// echo "</pre>";
+
+							if (self::isAssoc($rec)){
+								
+								$rec = self::parse($rec);
+
+							}
+
+						}
+
+						unset($rec);
+						// print_r("<br>METHOD: ");
+						// print_r($key);
+						// print_r("<br>OBJECT: ");
+						// print_r($object->table);
+						// if ($key=="get"){
+						// 	print_r("GETTING W!!");
+						// 	print_r($object);
+						// }
+						// print_r(" ");
+
+						$object = call_user_func_array([$object, $key], $arr);
+
+					}
+					
+				}
+
+			}
+				// echo "<pre>READY OBJECT";
+	   //          print_r($object->table);
+	   //          echo "</pre>";
+
+
+			return $object;
+
+          //   if (isset($data["filters"])){
+          //       foreach ($data["filters"] as $f){
+          //           if (count($f) == 3){
+          //               array_push($this->filters, [
+          //                   "field" => $f[0],
+          //                   "operator" => $f[1],
+          //                   "value" => $f[2]
+          //               ]);
+          //           } else {
+          //               if (count($f) == 2){
+          //                   array_push($this->filters, [
+          //                       "field" => $f[0],
+          //                       "operator" => "=",
+          //                       "value" => $f[1]
+          //                   ]);
+          //               }
+          //           }
+          //       }
+          //   }
+
+
+          //   if (isset($data["absorbs"])){
+          //       foreach ($data["absorbs"] as $a){
+          //   		$this->addModel($a, "absorbs");
+          //       }
+          //   }
+
+          //   if (isset($data["by"])){
+        		// $this->by($data["by"]);
+          //   }
+
+          //   return $this->get();
+
+        }
 
 		public function order(){
 
-			$o = self::init();
 			if (func_num_args() == 1){
-				array_push($o->orders, ["field"=>func_get_arg(0)]);
+
+				array_push($this->orders, ["field"=>func_get_arg(0)]);
+
 			} else {
-				array_push($o->orders, ["field"=>func_get_arg(0), "order"=>func_get_arg(1)]);
+
+				array_push($this->orders, ["field"=>func_get_arg(0), "order"=>func_get_arg(1)]);
+
 			}
-			return $o;
+
+			return $this;
 
 		}	
 
 		public function limit(){
 
-			$o = self::init();
-			$o->limits = array();
+			$this->limits = [];
+
 			if (func_num_args() == 1){
-				$o->limit = ["limit"=>func_get_arg(0)];
+
+				$this->limit = ["limit"=>func_get_arg(0)];
+
 			} else {
-				$o->limit = ["offset"=>func_get_arg(0), "limit"=>func_get_arg(1)];
+
+				$this->limit = ["offset"=>func_get_arg(0), "limit"=>func_get_arg(1)];
+
 			}
-			return $o;
+
+			return $this;
 
 		}	
 
 		public function select(){
-			$o = self::init();
-			$o->fields = array();
+
+			$this->fields = array();
 
 			if (func_num_args() == 1){
 				$str = str_replace(",", "", func_get_arg(0));
@@ -124,13 +234,12 @@
 				$arr = explode(" ", $str);
 				foreach ($arr as $key => $value) {
 					if (trim($value) <> ""){
-						
 						if (!(strpos($value, "@")) == false){
 							$arr1 = explode("@", $value);
-							array_push($o->fields, $arr1[0]);
-							$o->aliases[$arr1[0]] = $arr1[1];
+							array_push($this->fields, $arr1[0]);
+							$this->aliases[$arr1[0]] = $arr1[1];
 						} else {
-							array_push($o->fields, $value);
+							array_push($this->fields, $value);
 						}
 					}
 				}
@@ -138,135 +247,83 @@
 				for ($i = 0; $i < func_num_args(); $i++) {
 					$value = func_get_arg($i);
 					if (trim($value) <> ""){
-						array_push($o->fields, $value);
+						array_pus($this->fields, $value);
 					}
 			    }
 			}
-			return $o;
+
+			return $this;
+
 		}
 
+		public function init(){
 
-		//Поглощение таблицы
-		public function absorb(){
-			$o = self::init();
+			return $this;
+
+		}	
+
+		protected function addModel($args, $type){
+
+			$array = &$this->$type;
 
 			$outer_o = false;
-			if (is_object(func_get_arg(0))){
-				$outer_o = func_get_arg(0);
+
+			//print_r($args);
+
+			if (is_object($args[0])){
+				$outer_o = $args[0];
 			} else {
-				$outer_Class = func_get_arg(0);
-				$outer_o = new $outer_Class;
-				$table = (isset($outer_o->tableName)? $outer_o->tableName: strtolower($outer_Class));
-				$outer_o->table = $table;
+				$outer_Class = $args[0];
+				$outer_o = $outer_Class::init();
 			}
 
+			
 
-			$inner_key = false;
-			$outer_key = false;
-			//TODO Вынести в функцию
-
-			if (func_num_args() > 1){
-				if (func_num_args() == 3){
-					$inner_key = func_get_arg(1);
-					$outer_key = func_get_arg(2);
-				} 
-			} else {
-				if (isset($outer_o->scheme)){
-					foreach ($outer_o->scheme as $field => $value) {
-						if (isset($value['belongs'])){
-							$arr = explode(" ", $value['belongs']);
-							if (rtrim($arr[0]) == get_class($o)){
-								if (count($arr)>1){
-									if (count($arr) == 2){
-											$inner_key = $arr[1];
-											$outer_key = $field;
-									} 
-								} else {
-									$inner_key = "id";
-									$outer_key = $field;
-								}
-							}
-						}
-					}
-				}
-			}
-
-			if (($inner_key <> false) and ($outer_key <> false)){
-
-				$o->absorbs[$outer_o->table] = array(
-					"key" => $inner_key,
-					"data" => array()
-				);
-				$arr = $outer_o->get();
-
-				foreach ($arr as $rec) {
-					if (!(array_key_exists($rec[$outer_key], $o->absorbs[$outer_o->table]["data"]))){
-						$o->absorbs[$outer_o->table]["data"][$rec[$outer_key]] = array();
-					}
-					array_push($o->absorbs[$outer_o->table]["data"][$rec[$outer_key]], $rec);
-				}
-			}
-			// echo "<pre>";
-			// print_r($arr);
-			// echo "</pre>";
-
-			return $o;			
-		}
-
-		//Соединение таблиц
-		public function join(){
-
-			$o = self::init();
-			$outer_o = false;
-			if (is_object(func_get_arg(0))){
-				$outer_o = func_get_arg(0);
-			} else {
-				$outer_Class = func_get_arg(0);
-				$outer_o = new $outer_Class;
-				$table = (isset($outer_o->tableName)? $outer_o->tableName: strtolower($outer_Class));
-				$outer_o->table = $table;
-			}
-			if (!(array_key_exists($outer_o->table, $o->joins))){
-				$o->joins[$outer_o->table] = array(
+			if (!(array_key_exists($outer_o->table, $array))){
+				$array[$outer_o->table] = array(
+					"model" => $outer_o->modelName,
 					"fields" => $outer_o->fields,
 					"aliases" => $outer_o->aliases,
 					"comparisons" => array()
 				);
 			}
-			// echo "<pre>";
-			// print_r($outer_o);
-			// print_r($outer_Class);	
-			// echo "</pre>";
-			if (func_num_args() > 1){
-				if (func_num_args() == 3){
-					array_push($o->joins[$outer_o->table]["comparisons"], array(
-						func_get_arg(1), "=", func_get_arg(2)
+
+			if (count($args) > 1){
+				if (count($args) == 3){
+					array_push($array[$outer_o->table]["comparisons"], array(
+						$args[1], "=", $args[2]
 					));
 				} else {
-					array_push($o->joins[$outer_o->table]["comparisons"], array(
-						func_get_arg(1), func_get_arg(2), func_get_arg(3)
+					array_push($array[$outer_o->table]["comparisons"], array(
+						$args[1], $args[2], $args[3]
 					));
 				}
 			} else {
+				
 				if (isset($outer_o->scheme)){
+						
 					foreach ($outer_o->scheme as $field => $value) {
-						if (isset($value['belongs'])){
-							$arr = explode(" ", $value['belongs']);
-							if (rtrim($arr[0]) == get_class($o)){
+
+						foreach ($value as $mass) {
+
+							$arr = explode("@", $mass[0]);
+
+							if (rtrim($arr[0]) == ($this->modelName)){
+
 								if (count($arr)>1){
 									if (count($arr) == 2){
-										array_push($o->joins[$outer_o->table]["comparisons"], array(
+										array_push($array[$outer_o->table]["comparisons"], array(
 											$arr[1], "=", $field
 										));
 									} else {
 										if (count($arr) == 3){
-											array_push($o->joins[$outer_o->table]["comparisons"], array(
+											array_push($array[$outer_o->table]["comparisons"], array(
 												$arr[2], $arr[1] , $field
 											));
 										}	
 									}
 								} else {
-									array_push($o->joins[$outer_o->table]["comparisons"], array(
+									array_push($array[$outer_o->table]["comparisons"], array(
 										"id", "=", $field
 									));
 								}
@@ -277,42 +334,66 @@
 			}
 		
 
-			return $o;
+			return $this;
 
 		}
 
+		//Соединение таблиц
+		public function join(){
+
+			return self::addModel(func_get_args(), "joins");
+
+		}
+
+		//Поглощение таблицы
+		public function absorb(){
+
+			return self::addModel(func_get_args(), "absorbs");
+					
+		}
+
+
 		public function where(){
 
-			$o = self::init();
+        	if (func_num_args() == 3){
 
-			if (func_num_args() == 3){
-				array_push($o->filters, [
+				array_push($this->filters, [
+
 					"field" => func_get_arg(0),
 					"operator" => func_get_arg(1),
 					"value" => func_get_arg(2)
+
 				]);
+
 			} else {
+
 				if (func_num_args() == 2){
-					array_push($o->filters, [
+
+					array_push($this->filters, [
+
 						"field" => func_get_arg(0),
 						"operator" => "=",
 						"value" => func_get_arg(1)
+
 					]);
+
 				}	
+
 			}
 			
-			return $o;
+			return $this;
+
 		}	
+
 		protected function querySelect() {
+
+			
 
 			if (method_exists($this, "access_get")){
 				$access = $this->access_get();
 				foreach ($access as $key => $a) {
-					
-
 					if (count($a) == 2){
 						$this->where($a[0], $a[1]);
-
 					} else {
 						if (count($a) == 2){
 							$this->where($a[0], $a[1], $a[2]);
@@ -321,20 +402,18 @@
 				}
 			}
 			$this->preparedData = [
-				"fields" => $this->fields,
+				"fields"  => $this->fields,
 				"aliases" => $this->aliases,
 				"filters" => $this->filters,
-				"orders" => $this->orders,
-				"limit" => $this->limit,
-				"joins" => $this->joins
+				"orders"  => $this->orders,
+				"limit"   => $this->limit,
+				"joins"   => $this->joins
 			];
+
 			$q = $this->constructSelect($this->table, $this->preparedData);
 
-			
-			
 			$resultArray = array();
 			$result = $this->pdo->query($q);
-
 			if ($result){
 				$array = $result->fetchAll(PDO::FETCH_ASSOC);
 				if (!($this->byField == false)){
@@ -347,23 +426,107 @@
 					$resultArray = $array;
 				}
 			}
-			foreach ($resultArray as &$rec) {
-				foreach ($this->absorbs as $nameOfAbsorb => $absorb) {
-					$rec[$nameOfAbsorb] = (array_key_exists($rec[$absorb['key']], $absorb["data"]) ? $absorb["data"][$rec[$absorb['key']]] : array());
+			
+			foreach ($this->absorbs as $table => $absorb) {
+
+				$absorbOject = $absorb['model']::init();
+
+				foreach ($absorb['comparisons'] as $comparison) {
+
+					$fieldArray = [];
+
+					if (array_key_exists($comparison[0], $this->aliases)){
+
+						$realField = $this->aliases[$comparison[0]];
+
+					} else {
+
+						$realField = $comparison[0];
+
+					}
+					
+					foreach ($resultArray as $value) {
+
+						array_push($fieldArray, $value[$realField]);
+
+					}
+
+					$absorbOject = $absorbOject->where($comparison[2], "in", $fieldArray);
 				}
-			}	
+
+				
+				$absorbArray = $absorbOject->get();
+				
+				//print_r($absorbArray);
+				// print_r($resultArray);
+			//	print_r($absorb['comparisons']);
+
+				foreach ($resultArray as &$rec) {
+	
+					$tempArray = $absorbArray;
+
+					foreach ($absorb['comparisons'] as $comparison) {
+
+						if (array_key_exists($comparison[0], $this->aliases)){
+
+							$realField = $this->aliases[$comparison[0]];
+
+						} else {
+
+							$realField = $comparison[0];
+
+						}
+
+
+						$values = ["iternalValue" => $rec[$realField], "outerField"=>$comparison[2]];
+
+						$tempArray = array_filter($tempArray, function($var)  use ($values)
+			            	{return($var[$values['outerField']] == $values['iternalValue']);}
+			        	);
+
+						
+					}
+
+					$rec[$table] = $tempArray;
+
+
+
+					// $abs = array_filter($absorbArray, function($var)  use ($goodsWithProviders)
+			  //           {return(in_array(rtrim($var["code"]), $goodsWithProviders) == False);}
+			  //       );
+
+				}
+
+			//	print_r($resultArray);
+
+			}
+
+			
+
+//            foreach ($this->absorbs as $nameOfAbsorb => $absorb) {
+//                var_dump($absorb);
+//            }
+
+			// foreach ($resultArray as &$rec) {
+			// 	foreach ($this->absorbs as $nameOfAbsorb => $absorb) {
+
+			// 		$rec[$nameOfAbsorb] = (array_key_exists($rec[$absorb['key']], $absorb["data"]) ? $absorb["data"][$rec[$absorb['key']]] : array());
+			// 	}
+			// }
+
 			unset($rec);
 			return $resultArray;
 		}
 
 		
 
-		public function get(){
+		public function get($empty=false){
 
-			$o = self::init();
-			if ($o->connect()){
+			//print_r("GET this object".$this->table);
 
-				return $o->querySelect();
+			if ($this->connect()){
+             //   var_dump($o);
+                return $this->querySelect();
 			} else {
 				return false;
 			}
@@ -372,13 +535,18 @@
 
 		public function all(){
 
-			$o = self::init();
-			if ($o->connect()){
-				$o->filters = array();
-				$o->limit = array();
-				return $o->querySelect();
+			$this->filters = [];
+
+			$this->limit = [];
+
+			if ($this->connect()){
+
+				return $this->get();
+
 			} else {
+
 				return false;
+
 			}
 
 		}	
@@ -423,6 +591,7 @@
 
 	        $jns = "";
 	        if (isset($data["joins"])) {
+
 	        	
 	        	foreach ($data["joins"] as $tableJoin=>$j) {
 	        		$jn = "";
@@ -433,7 +602,7 @@
         				
 	        	}
 	        }	
-
+			//echo "jj ".$jns;
 	        $flt = "";
 	        if (isset($data["filters"])) {
 	            foreach ($data["filters"] as $f) {
@@ -443,7 +612,7 @@
 	                        foreach ($f['value'] as $v) {
 	                            $arr .= ($arr == '' ? '' : ', ') . "'" . $v . "'";
 	                        }
-	                        $flt .= ($flt == "" ? "" : " AND ") . "`" . $f['field'] . "` IN (" . $arr . ")";
+	                        $flt .= ($flt == "" ? "" : " AND ") . "" . $table.".".$f['field'] . " IN (" . $arr . ")";
 	                    } else {
 	                        return "";
 	                    }
@@ -453,13 +622,13 @@
 	                        foreach ($f['value'] as $v) {
 	                            $arr .= ($arr == '' ? '' : ', ') . "'" . $v . "'";
 	                        }
-	                        $flt .= ($flt == "" ? "" : " AND ") . "`" . $f['field'] . "` NOT IN (" . $arr . ")";
+	                        $flt .= ($flt == "" ? "" : " AND ") . "" .$table.".". $f['field'] . " NOT IN (" . $arr . ")";
 	                    } else {
 	                        return "";
 	                    }
 	                }
 	                else {
-	                    $flt .= ($flt == "" ? "" : " AND ") . "`" . $f['field'] . "` " . $f['operator'] . " '" . $f['value'] . "'";
+	                    $flt .= ($flt == "" ? "" : " AND ") . "" .$table.".". $f['field'] . " " . $f['operator'] . " '" . $f['value'] . "'";
 	                }
 	            }
 	        }
@@ -480,9 +649,24 @@
 	        if ($ord<>""){$q .= ' ORDER BY '.$ord;}
 	        if ($lim<>""){$q .= ' LIMIT '.$lim;}
 	        //Здесь будет порядок
-	        echo $q;
+	        //var_dump($q);
 	        return $q;
-	        
+	    }
+	}
+
+	abstract class Sheldon {
+
+	    public static function __callStatic($method, $parameters) {
+
+    		$instance = new SheldonModel;
+
+    		$instance->table = (isset(static::$tableName)? static::$tableName: mb_strtolower(get_called_class()));
+
+    		$instance->scheme = (isset(static::$scheme)? static::$scheme: []);
+
+			$instance->modelName = get_called_class();
+
+    		return call_user_func_array(array($instance, $method), $parameters);
 
 	    }
 	}
