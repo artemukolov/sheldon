@@ -430,13 +430,12 @@
 			if ($result){
 
 				$array = $result->fetchAll(PDO::FETCH_ASSOC);
-//                 echo "<pre>";
-//                 print_r("ds --- ");
-//                 print_r($result);
-//                 print_r($array);
-//                print_r(" --- ds");
-//                 echo "</pre>";
-                //var_dump($array);
+
+				if (method_exists($modelName, "afterSelect")){
+
+					$array = $modelName::afterSelect($array);
+
+				}
 
 				if (!($this->byField == false)){
 
