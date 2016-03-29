@@ -8,9 +8,9 @@
 			'mysql' => array(
 				'driver'    => 'mysql',
 				'host'      => 'localhost',
-				'db'  		=> 'to',
+				'db'  		=> 'db',
 				'user'  	=> 'root',
-				'pass'		=> 'agressor505',
+				'pass'		=> '',
 				'charset'   => 'utf8',
 				'collation' => 'utf8_unicode_ci',
 				'prefix'    => ''
@@ -27,7 +27,7 @@
 			"limit" => array(),
 		);
 
-		protected static $absorbsMethods = ["absorb", "join", "leftJoin", "innerJoin"];
+		protected static $absorbsMethods = ["absorb", "join", "leftJoin", "innerJoin", "rightJoin"];
 
 		//подготовленные данные для запроса
 		protected $byField = false;
@@ -35,6 +35,8 @@
 		protected $fields  = array();
 		//Асевдонимы выбираемых полей
 		protected $aliases = array();
+		//фильтры налагаемые на запрос
+		protected $modificators = array();
 		//фильтры налагаемые на запрос
 		protected $filters = array();
 		//Поля упорядочиваний для выборки
@@ -194,7 +196,44 @@
 
 			return $this;
 
-		}	
+		}
+
+		protected static $shortSelectModificators = [
+			"c" => "COUNT",
+			"d" => "DISTINCT",
+			"mx" => "MAX",
+			"mn" => "MIN"
+		];
+
+		protected function parseSelectItem($itemStr){
+			$field = $itemStr;
+			$alias = "";
+			$modificator = "";
+			if (!(strpos($field, "@")) == false){
+				$arr1 = explode("@", $field);
+				$field = $arr1[0];
+				$alias = $arr1[1];
+				
+			}
+
+			if (!(strpos($field, "#")) == false){
+				$arr2 = explode("#", $field);
+				$field = $arr2[1];
+				if (array_key_exists($arr2[0], self::$shortSelectModificators)){
+					$modificator = self::$shortSelectModificators[$arr2[0]];
+				} else {
+					$modificator = mb_strtoupper($arr2[0]);
+				}
+			}
+			if ($alias <> ""){
+				$this->aliases[$field] = $alias;
+			}
+			if ($modificator <> ""){
+				$this->modificators[$field] = $modificator;
+			}
+
+			return $field;
+		}
 
 		public function select(){
 
@@ -206,20 +245,14 @@
 				$arr = explode(" ", $str);
 				foreach ($arr as $key => $value) {
 					if (trim($value) <> ""){
-						if (!(strpos($value, "@")) == false){
-							$arr1 = explode("@", $value);
-							array_push($this->fields, $arr1[0]);
-							$this->aliases[$arr1[0]] = $arr1[1];
-						} else {
-							array_push($this->fields, $value);
-						}
+						array_push($this->fields, $this->parseSelectItem($value));
 					}
 				}
 			} else {
 				for ($i = 0; $i < func_num_args(); $i++) {
 					$value = func_get_arg($i);
 					if (trim($value) <> ""){
-						array_pus($this->fields, $value);
+						array_pus($this->fields, $this->parseSelectItem($value));
 					}
 			    }
 			}
@@ -327,6 +360,12 @@
 
 		}
 
+		public function rightJoin(){
+
+			return self::addModel(func_get_args(), "joins", "RIGHT");
+
+		}
+
 		public function leftJoin(){
 
 			return self::addModel(func_get_args(), "joins", "LEFT");
@@ -402,6 +441,7 @@
 			$this->preparedData = [
 				"fields"  => $this->fields,
 				"aliases" => $this->aliases,
+				"modificators" => $this->modificators,
 				"filters" => $this->filters,
 				"orders"  => $this->orders,
 				"limit"   => $this->limit,
@@ -426,8 +466,8 @@
 			$result = $this->pdo->query($q);
 
 
-
 			if ($result){
+
 
 				$array = $result->fetchAll(PDO::FETCH_ASSOC);
 
@@ -911,7 +951,13 @@
 	        if (isset($data["fields"])){
 	        	if (count($data["fields"]) > 0){
 	            	foreach ($data["fields"] as $f){
-	            		$fields .= ($fields == ""? "":",").$table.".".$f.(!(array_key_exists($f, $data['aliases']) == false) ? " AS ".$data['aliases'][$f]:"");
+	            		$mod_ = (array_key_exists($f, $data['modificators'])? $data['modificators'][$f]: false);
+	            		$fields .= ($fields == ""? "":",").
+	            			($mod_? $mod_."(": "").
+	            			$table.".".$f.
+	            			($mod_? ")": "").
+	            			(!(array_key_exists($f, $data['aliases']) == false) ? " AS ".$data['aliases'][$f]:"");
+	            			
 	            	}
 	        	} 
         	}
@@ -967,7 +1013,7 @@
 	        if ($lim<>""){$q .= ' LIMIT '.$lim;}
 
 //	        echo "<pre>";
-       //   print_r($q);
+//          print_r($q);
 //	        echo "</pre>";
 
 	        return $q;
