@@ -1012,9 +1012,6 @@
 	        if ($ord<>""){$q .= ' ORDER BY '.$ord;}
 	        if ($lim<>""){$q .= ' LIMIT '.$lim;}
 
-//	        echo "<pre>";
-//          print_r($q);
-//	        echo "</pre>";
 
 	        return $q;
 	    }
@@ -1040,13 +1037,15 @@
 
     		$instance = new SheldonModel;
 
-    		$instance->table = (isset(static::$tableName)? static::$tableName: mb_strtolower(get_called_class()));
+			if (method_exists($instance, $method)){
+	    		$instance->table = (isset(static::$tableName)? static::$tableName: mb_strtolower(get_called_class()));
 
-    		$instance->scheme = (isset(static::$scheme)? static::$scheme: []);
-
-			$instance->modelName = get_called_class();
-
-    		return call_user_func_array(array($instance, $method), $parameters);
+	    		$instance->scheme = (isset(static::$scheme)? static::$scheme: []);
+				$instance->modelName = get_called_class();
+    			return call_user_func_array(array($instance, $method), $parameters);
+			} else {
+				return Sheldon::table($method);
+			}
 
 	    }
 	}
