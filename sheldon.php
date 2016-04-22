@@ -30,6 +30,8 @@
 		protected static $absorbsMethods = ["absorb", "join", "leftJoin", "innerJoin", "rightJoin"];
 
 		//подготовленные данные для запроса
+		protected $rawString = false;
+		//подготовленные данные для запроса
 		protected $byField = false;
 		//Поля применяемые для выборки
 		protected $fields  = array();
@@ -97,6 +99,18 @@
 
 			return $this;
 			
+		}
+
+		public function raw(){
+
+			if (trim(func_get_arg(0)) <> ""){
+
+				$this->rawString = func_get_arg(0);
+
+			}
+
+			return $this;
+
 		}
 
 		public function parse($data){
@@ -388,7 +402,8 @@
 
 					"field" => func_get_arg(0),
 					"operator" => func_get_arg(1),
-					"value" => func_get_arg(2)
+					"value" => func_get_arg(2),
+					"modificator" => "AND"
 
 				]);
 
@@ -400,14 +415,48 @@
 
 						"field" => func_get_arg(0),
 						"operator" => "=",
-						"value" => func_get_arg(1)
+						"value" => func_get_arg(1),
+						"modificator" => "AND"
 
 					]);
 
-				}	
+				}
 
 			}
-			
+
+			return $this;
+
+		}
+
+		public function whereOr(){
+
+        	if (func_num_args() == 3){
+
+				array_push($this->filters, [
+
+					"field" => func_get_arg(0),
+					"operator" => func_get_arg(1),
+					"value" => func_get_arg(2),
+					"modificator" => "OR"
+				]);
+
+			} else {
+
+				if (func_num_args() == 2){
+
+					array_push($this->filters, [
+
+						"field" => func_get_arg(0),
+						"operator" => "=",
+						"value" => func_get_arg(1),
+						"modificator" => "OR"
+
+					]);
+
+				}
+
+			}
+
 			return $this;
 
 		}
@@ -439,13 +488,14 @@
 				}
 			}
 			$this->preparedData = [
-				"fields"  => $this->fields,
-				"aliases" => $this->aliases,
+				"fields"  	   => $this->fields,
+				"aliases" 	   => $this->aliases,
 				"modificators" => $this->modificators,
-				"filters" => $this->filters,
-				"orders"  => $this->orders,
-				"limit"   => $this->limit,
-				"joins"   => $this->joins
+				"filters" 	   => $this->filters,
+				"orders"  	   => $this->orders,
+				"limit"   	   => $this->limit,
+				"joins"   	   => $this->joins,
+				"rawString"    => $this->rawString
 			];
 
 
@@ -837,7 +887,7 @@
                             foreach ($f['value'] as $v) {
                                 $arr .= ($arr == '' ? '' : ', ') . "'" . $v . "'";
                             }
-                            $flt .= ($flt == "" ? "" : " AND ") . "" . $table.".".$f['field'] . " IN (" . $arr . ")";
+                            $flt .= ($flt == "" ? "" : " ".$f["modificator"]." ") . "" . $table.".".$f['field'] . " IN (" . $arr . ")";
                         } else {
                             return "";
                         }
@@ -847,13 +897,13 @@
                             foreach ($f['value'] as $v) {
                                 $arr .= ($arr == '' ? '' : ', ') . "'" . $v . "'";
                             }
-                            $flt .= ($flt == "" ? "" : " AND ") . "" .$table.".". $f['field'] . " NOT IN (" . $arr . ")";
+                            $flt .= ($flt == "" ? "" : " ".$f["modificator"]." ") . "" .$table.".". $f['field'] . " NOT IN (" . $arr . ")";
                         } else {
                             return "";
                         }
                     }
                     else {
-                        $flt .= ($flt == "" ? "" : " AND ") . "" .$table.".". $f['field'] . " " . $f['operator'] . " " . (trim($f['value']) == ""? "": "'".$f['value']."'") ;
+                        $flt .= ($flt == "" ? "" : " ".$f["modificator"]." ") . "" .$table.".". $f['field'] . " " . $f['operator'] . " " . (trim($f['value']) == ""? "": "'".$f['value']."'") ;
                     }
                 }
             }
@@ -944,9 +994,10 @@
 
 		private static function constructSelect($table, $data){
 
-
-
-	        $q = "SELECT ";
+	        if ($data["rawString"]){
+				return $data["rawString"];
+			}
+			$q = "SELECT ";
 	        $fields = "";
 	        if (isset($data["fields"])){
 	        	if (count($data["fields"]) > 0){
@@ -959,10 +1010,10 @@
 	            			(!(array_key_exists($f, $data['aliases']) == false) ? " AS ".$data['aliases'][$f]:"");
 	            			
 	            	}
-	        	} 
+	        	}
         	}
 				
-	        if (isset($data["joins"])) {
+	        if (isset($data["joins"])){
 	        	foreach ($data["joins"] as $tableJoin=>$j) {
         			foreach ($j["fields"] as $f) {
 						$fields .= ($fields == ""? "":",").$tableJoin.".".$f.(!(array_key_exists($f, $j["aliases"]) == false) ? " AS ".$j['aliases'][$f]:"");
@@ -972,17 +1023,12 @@
 
 	        if ($fields == ""){$fields = "*";}
 	        $q = $q.$fields." FROM ".$table;
-	        
-
 	        $jns = "";
-
 
 	        if (isset($data["joins"])) {
 
-	        	
 	        	foreach ($data["joins"] as $tableJoin=>$j) {
 
-                    //tst
 	        		$jn = "";
         			foreach ($j["comparisons"] as $c) {
     					$jn .= ($jn == ""? " ".$j["mode"]." JOIN ".$tableJoin. " ON " :" AND "). " " .$table.".".$c[0]." ".$c[1]." ".$tableJoin.".".$c[2];
@@ -1012,6 +1058,9 @@
 	        if ($ord<>""){$q .= ' ORDER BY '.$ord;}
 	        if ($lim<>""){$q .= ' LIMIT '.$lim;}
 
+//	        echo "<pre>";
+       //   print_r($q);
+//	        echo "</pre>";
 
 	        return $q;
 	    }
@@ -1037,15 +1086,13 @@
 
     		$instance = new SheldonModel;
 
-			if (method_exists($instance, $method)){
-	    		$instance->table = (isset(static::$tableName)? static::$tableName: mb_strtolower(get_called_class()));
+    		$instance->table = (isset(static::$tableName)? static::$tableName: mb_strtolower(get_called_class()));
 
-	    		$instance->scheme = (isset(static::$scheme)? static::$scheme: []);
-				$instance->modelName = get_called_class();
-    			return call_user_func_array(array($instance, $method), $parameters);
-			} else {
-				return Sheldon::table($method);
-			}
+    		$instance->scheme = (isset(static::$scheme)? static::$scheme: []);
+
+			$instance->modelName = get_called_class();
+
+    		return call_user_func_array(array($instance, $method), $parameters);
 
 	    }
 	}
