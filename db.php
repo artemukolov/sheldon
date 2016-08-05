@@ -4,8 +4,8 @@
 		protected static $db = array(
 			'mysql' => array(
 				'driver'    => 'mysql',
-				'host'      => 'localhost',
-				'db'  		=> 'to',
+				'host'      => '',
+				'db'  		=> 'test',
 				'user'  	=> 'root',
 				'pass'		=> '',
 				'charset'   => 'utf8',
@@ -14,7 +14,7 @@
 			),
 		);
 
-		protected static $driver = "mysql";
+		public static $driver = "mysql";
 
 		public static function initPDO()
 		{

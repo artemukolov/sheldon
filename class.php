@@ -28,4 +28,8 @@
     		return call_user_func_array(array($instance, $method), $parameters);
 
 	    }
+
+		public static function error($message = "") {
+			throw new Exception($message);
+		}
 	}
