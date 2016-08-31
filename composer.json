@@ -5,6 +5,7 @@
     "keywords": [
         "Ukolov", "sheldon", "ORM", "db"
     ],
+    "minimum-stability": "dev",
     "homepage": "https://github.com/artemukolov/sheldon",
     "license": "MIT",
     "authors": [
