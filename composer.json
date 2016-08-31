@@ -3,8 +3,7 @@
     "type": "library",
     "description": ":sheldon ORM",
     "keywords": [
-        ":vendor",
-        ":sheldon"
+        "Ukolov", "sheldon", "ORM", "db"
     ],
     "homepage": "https://github.com/artemukolov/sheldon",
     "license": "MIT",
