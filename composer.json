@@ -10,7 +10,7 @@
     "license": "MIT",
     "authors": [
         {
-            "name": "artemukolov",
+            "name": "Artem Ukolov",
             "email": "artem@ukolov.info",
             "homepage": "http://ukolov.info",
             "role": "Developer"
@@ -26,12 +26,12 @@
     },
     "autoload": {
         "psr-4": {
-            ":vendor\\:package_name\\": "src"
+            "Ukolov\\Sheldon\\": "src"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            ":vendor\\:package_name\\": "tests"
+            "Ukolov\\Sheldon\\": "tests"
         }
     },
     "scripts": {
