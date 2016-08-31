@@ -1,5 +1,5 @@
 {
-    "name": ":artemukolov/sheldon",
+    "name": "artemukolov/sheldon",
     "type": "library",
     "description": ":sheldon ORM",
     "keywords": [
