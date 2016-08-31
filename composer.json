@@ -1,7 +1,7 @@
 {
     "name": "artemukolov/sheldon",
     "type": "library",
-    "description": ":Sheldon ORM: php library",
+    "description": "Sheldon ORM: php library",
     "keywords": [
         "Ukolov", "sheldon", "ORM", "db"
     ],
