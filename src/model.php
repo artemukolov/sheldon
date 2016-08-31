@@ -48,10 +48,18 @@
 			return ($this->pdo? true: false);
 		}
 
+		private function queryAndFetch($query) {
+			$data = $this->pdo->query($query)->fetchAll(PDO::FETCH_ASSOC);
+			return $data;
+		}
+
 		private function query($query)
 		{
-			return $this->pdo->query($query);
+			$data = $this->pdo->query($query);
+			return $data;
 		}
+
+
 
 		private function init()
 		{
@@ -373,9 +381,9 @@
             }
 			$q = $this->constructSelect($this->table, $this->preparedData);
 			$resultArray = array();
-			$result = $this->query($q);
+			$result = $this->queryAndFetch($q);
 			if ($result){
-				$array = $result->fetchAll(PDO::FETCH_ASSOC);
+				$array = $result;
 				if (method_exists($modelName, "afterSelect")){
 					$array = $modelName::afterSelect($array);
 				}
@@ -472,7 +480,7 @@
 		{
             $modelName = $this->modelName;
             if ((method_exists($modelName, "beforeInsert")) and (!($beforeSilense))){
-                $data = $modelName::beforeInsert($data);
+             //   $data = $modelName::beforeInsert($data);
             }
 			$q = self::constructInsert($this->table, $data);
             $result = $this->query($q);
@@ -482,7 +490,7 @@
 					$id = $this->pdo->lastInsertId();
 					$result = Sheldon::table($this->table)->where("id", $id)->get();
 					if (count($result) > 0){
-						$modelName::afterInsert($result[0]);
+						//$modelName::afterInsert($result[0]);
 					}
 					return $id;
 				}
@@ -509,6 +517,15 @@
 			$driver = '\Sheldon\driver\\'.SheldonDB::$driver;
 			if (class_exists($driver)) {
 				return $driver::constructSelect($table, $preparedData);
+			} else {
+				return false;
+			}
+		}
+		protected function constructInsert($table, $preparedData)
+		{
+			$driver = '\Sheldon\driver\\'.SheldonDB::$driver;
+			if (class_exists($driver)) {
+				return $driver::constructInsert($table, $preparedData);
 			} else {
 				return false;
 			}
