@@ -6,6 +6,7 @@
     {
         private static function parseFilter($table, $f)
         {
+
             $flt = "";
             if (isset($f['raw'])){
                 $flt .= ($flt == "" ? "" : " AND ").$f['raw'];
@@ -58,6 +59,9 @@
 
         private static function getWhereRow($table, $data)
         {
+
+
+
             $flt = "";
             if (isset($data["filters"])){
                 $flt = self::parseFilters($table, $data["filters"], $flt);
@@ -108,6 +112,7 @@
 
         public static function constructSelect($table, $data)
         {
+
             if ($data["rawString"]){
                 return $data["rawString"];
             }
@@ -163,7 +168,7 @@
             $q .= $flt;
             if ($ord<>""){$q .= ' ORDER BY '.$ord;}
             if ($lim<>""){$q .= ' LIMIT '.$lim;}
-            //echo $q;
+            echo $q;
             return $q;
         }
     }
